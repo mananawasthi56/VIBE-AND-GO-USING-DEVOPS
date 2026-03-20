@@ -19,6 +19,7 @@ export default function Saved() {
   const [places, setPlaces] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
+  const [removingId, setRemovingId] = useState(null) // ✅ tracks which card is being removed
 
   useEffect(() => { fetchSaved() }, [])
 
@@ -26,14 +27,27 @@ export default function Saved() {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/saved`)
       const data = await res.json()
-      setPlaces(data)
-    } catch {}
-    finally { setLoading(false) }
+      // ✅ safety check — make sure data is an array
+      setPlaces(Array.isArray(data) ? data : [])
+    } catch {
+      setPlaces([])
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function unsave(osmId) {
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/saved/${osmId}`, { method: 'DELETE' })
-    setPlaces(places.filter(p => p.osm_id !== osmId))
+    setRemovingId(osmId) // ✅ show removing state
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/saved/${osmId}`, { method: 'DELETE' })
+      // ✅ small delay so user sees the heart change before card disappears
+      setTimeout(() => {
+        setPlaces(prev => prev.filter(p => p.osm_id !== osmId))
+        setRemovingId(null)
+      }, 300)
+    } catch {
+      setRemovingId(null)
+    }
   }
 
   const moods = ['all', ...new Set(places.map(p => p.mood))]
@@ -46,8 +60,14 @@ export default function Saved() {
           from { opacity: 0; transform: translateY(16px); }
           to { opacity: 1; transform: translateY(0); }
         }
+        @keyframes fadeOut {
+          from { opacity: 1; transform: translateY(0); }
+          to { opacity: 0; transform: translateY(-8px); }
+        }
         .fade-up { animation: fadeUp 0.5s ease both; }
+        .fade-out { animation: fadeOut 0.3s ease both; }
         .place-card:hover { transform: translateY(-2px); }
+        .heart-btn:hover { transform: scale(1.2); }
         @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
 
@@ -130,16 +150,19 @@ export default function Saved() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {filtered.map((place, i) => {
             const moodInfo = MOODS[place.mood] || { emoji: '📍', color: '#22c55e' }
+            const isRemoving = removingId === place.osm_id
             return (
-              <div key={place._id || place.osm_id}
-                className="place-card"
+              <div
+                key={place._id || place.osm_id}
+                className={`place-card ${isRemoving ? 'fade-out' : ''}`}
                 style={{
                   background: 'rgba(255,255,255,0.03)',
                   border: '1px solid rgba(255,255,255,0.07)',
                   borderRadius: '20px', padding: '16px',
                   display: 'flex', gap: '12px', alignItems: 'center',
                   transition: 'all 0.25s',
-                  animation: `fadeUp 0.4s ${i * 0.06}s ease both`,
+                  animation: isRemoving ? 'fadeOut 0.3s ease both' : `fadeUp 0.4s ${i * 0.06}s ease both`,
+                  opacity: isRemoving ? 0.5 : 1,
                 }}>
                 <div style={{
                   width: '46px', height: '46px', borderRadius: '14px',
@@ -162,11 +185,15 @@ export default function Saved() {
                     </p>
                   )}
                 </div>
-                <button onClick={() => unsave(place.osm_id)} style={{
-                  fontSize: '20px', background: 'none', border: 'none',
-                  cursor: 'pointer', transition: 'transform 0.2s', flexShrink: 0,
-                }}>
-                  ❤️
+                {/* ✅ Heart shows 🤍 while removing, ❤️ otherwise */}
+                <button
+                  className="heart-btn"
+                  onClick={() => unsave(place.osm_id)}
+                  style={{
+                    fontSize: '20px', background: 'none', border: 'none',
+                    cursor: 'pointer', transition: 'transform 0.2s', flexShrink: 0,
+                  }}>
+                  {isRemoving ? '🤍' : '❤️'}
                 </button>
               </div>
             )

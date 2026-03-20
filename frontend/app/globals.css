@@ -61,3 +61,12 @@ body {
   color: #f5f5f5 !important;
   border-color: #2a2a2a !important;
 }
+
+/* ✅ Gradient text fix — prevents SSR orange block */
+.gradient-title {
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  display: inline-block;
+  transition: all 0.8s ease;
+}

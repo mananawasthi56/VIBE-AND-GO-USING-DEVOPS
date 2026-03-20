@@ -1,6 +1,9 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
+
+const GradientTitle = dynamic(() => import('@/components/GradientTitle'), { ssr: false })
 
 const MOODS = [
   { id: 'adventure', emoji: '⛰️', label: 'Adventure',  sub: 'Explore & thrill',  color: '#f97316', glow: 'rgba(249,115,22,0.4)' },
@@ -42,7 +45,6 @@ export default function Home() {
 
   useEffect(() => {
     setMounted(true)
-    // Generate floating particles
     setParticles(Array.from({ length: 20 }, (_, i) => ({
       id: i,
       x: Math.random() * 100,
@@ -135,6 +137,14 @@ export default function Home() {
 
   const selectedMoodData = MOODS.find(m => m.id === selectedMood)
 
+  if (!mounted) {
+    return (
+      <main style={{ minHeight: '100vh', background: '#050508', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: '#6b7280', fontSize: '14px' }}>Loading...</p>
+      </main>
+    )
+  }
+
   return (
     <main style={{
       minHeight: '100vh',
@@ -163,7 +173,6 @@ export default function Home() {
           transition: 'background 1s ease',
           animation: 'float2 15s ease-in-out infinite',
         }} />
-        {/* Floating particles */}
         {particles.map(p => (
           <div key={p.id} style={{
             position: 'absolute',
@@ -226,18 +235,17 @@ export default function Home() {
           }}>
             Mood-based discovery
           </div>
-          <h1 style={{
-            fontFamily: 'var(--font-clash)',
-            fontSize: '52px', fontWeight: '700',
-            background: selectedMoodData
+
+          {/* ✅ Fixed — dynamic import with ssr:false prevents gradient block */}
+          <GradientTitle
+            gradient={selectedMoodData
               ? `linear-gradient(135deg, ${selectedMoodData.color}, #fff)`
-              : 'linear-gradient(135deg, #fff, #6b7280)',
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-            transition: 'all 0.8s ease',
-            lineHeight: 1.1, marginBottom: '8px',
-          }}>
+              : 'linear-gradient(135deg, #fff, #6b7280)'
+            }
+          >
             Vibe & Go
-          </h1>
+          </GradientTitle>
+
           <p style={{ color: '#6b7280', fontSize: '14px' }}>
             Find the perfect place for your mood
           </p>
